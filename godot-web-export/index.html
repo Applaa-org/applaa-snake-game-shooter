@@ -163,7 +163,9 @@
                     x: 100 + i * 20,
                     y: 100,
                     size: 18,
-                    alive: true
+                    alive: true,
+                    vx: 0,
+                    vy: 0
                 });
             }
         }
@@ -171,10 +173,12 @@
         // Input handling
         document.addEventListener('keydown', (e) => {
             keys[e.key.toLowerCase()] = true;
+            e.preventDefault(); // Prevent default browser behavior
         });
         
         document.addEventListener('keyup', (e) => {
             keys[e.key.toLowerCase()] = false;
+            e.preventDefault();
         });
         
         function updatePlayer(deltaTime) {
@@ -187,8 +191,7 @@
             
             // Keep player on screen
             player.x = Math.max(16, Math.min(784, player.x));
-            player.y = Math
-player.y = Math.max(16, Math.min(584, player.y));
+            player.y = Math.max(16, Math.min(584, player.y));
             
             // Shooting
             const now = Date.now();
@@ -210,21 +213,25 @@ player.y = Math.max(16, Math.min(584, player.y));
             const speed = 100 * deltaTime / 1000;
             const head = worm[0];
             
-            // Simple movement pattern
+            // Initialize movement if needed
+            if (!head.vx) head.vx = speed;
+            if (!head.vy) head.vy = 0;
+            
+            // Simple movement pattern - bounce off walls
             if (head.x <= 20 || head.x >= 780) {
+                head.vx = -head.vx;
                 for (let segment of worm) {
-                    segment.vx = -segment.vx || speed;
+                    segment.vx = head.vx;
                 }
             }
             if (head.y <= 20 || head.y >= 580) {
+                head.vy = -head.vy;
                 for (let segment of worm) {
-                    segment.vy = -segment.vy || speed;
+                    segment.vy = head.vy;
                 }
             }
             
             // Move head
-            if (!head.vx) head.vx = speed;
-            if (!head.vy) head.vy = 0;
             head.x += head.vx;
             head.y += head.vy;
             
