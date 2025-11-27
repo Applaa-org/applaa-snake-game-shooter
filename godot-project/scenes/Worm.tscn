@@ -1,0 +1,6 @@
+[gd_scene load_steps=2 format=3 uid="uid://f7g8h9i0j1k2l"]
+
+[ext_resource type="Script" path="res://scripts/Worm.gd" id="1"]
+
+[node name="Worm" type="Node2D"]
+script = ExtResource("1")

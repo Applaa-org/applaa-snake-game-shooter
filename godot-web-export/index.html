@@ -1,0 +1,391 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Snake Game Shooter - Retro Arcade</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            background: #000;
+            color: #0f0;
+            font-family: 'Courier New', monospace;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            overflow: hidden;
+        }
+        
+        #gameContainer {
+            position: relative;
+            width: 800px;
+            height: 600px;
+            background: #111;
+            border: 4px solid #0f0;
+            box-shadow: 0 0 20px #0f0;
+        }
+        
+        #gameCanvas {
+            display: block;
+            image-rendering: pixelated;
+            image-rendering: -moz-crisp-edges;
+            image-rendering: crisp-edges;
+        }
+        
+        #ui {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            padding: 10px;
+            font-size: 18px;
+            text-shadow: 0 0 5px #0f0;
+            pointer-events: none;
+        }
+        
+        #score {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+        }
+        
+        #health {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+        }
+        
+        #menu {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            text-align: center;
+            background: rgba(0, 0, 0, 0.9);
+            padding: 30px;
+            border: 2px solid #0f0;
+            display: none;
+        }
+        
+        #menu h1 {
+            margin: 0 0 20px 0;
+            font-size: 32px;
+            color: #0f0;
+            text-shadow: 0 0 10px #0f0;
+        }
+        
+        #menu p {
+            margin: 10px 0;
+            font-size: 14px;
+        }
+        
+        .button {
+            background: #0f0;
+            color: #000;
+            border: none;
+            padding: 10px 20px;
+            margin: 5px;
+            font-family: 'Courier New', monospace;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        
+        .button:hover {
+            background: #3f3;
+            box-shadow: 0 0 10px #0f0;
+        }
+        
+        .button:active {
+            background: #080;
+        }
+        
+        #instructions {
+            position: absolute;
+            bottom: 10px;
+            left: 10px;
+            font-size: 12px;
+            opacity: 0.7;
+        }
+    </style>
+</head>
+<body>
+    <div id="gameContainer">
+        <canvas id="gameCanvas" width="800" height="600"></canvas>
+        <div id="ui">
+            <div id="score">SCORE: 000000</div>
+            <div id="health">HEALTH: 3</div>
+        </div>
+        <div id="instructions">WASD: Move | SPACE: Shoot | Destroy the worm!</div>
+        
+        <div id="menu">
+            <h1 id="menuTitle">SNAKE SHOOTER</h1>
+            <p id="menuText">WASD: Move<br>SPACE: Shoot<br>Destroy the worm!</p>
+            <div id="finalScore" style="display: none;">FINAL SCORE: 000000</div>
+            <button class="button" id="startButton" onclick="startGame()">START GAME</button>
+            <button class="button" id="restartButton" onclick="restartGame()" style="display: none;">RESTART</button>
+            <button class="button" id="menuButton" onclick="showMenu()" style="display: none;">MAIN MENU</button>
+            <button class="button" onclick="closeGame()">CLOSE</button>
+        </div>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        const menu = document.getElementById('menu');
+        const menuTitle = document.getElementById('menuTitle');
+        const menuText = document.getElementById('menuText');
+        const finalScore = document.getElementById('finalScore');
+        const startButton = document.getElementById('startButton');
+        const restartButton = document.getElementById('restartButton');
+        const menuButton = document.getElementById('menuButton');
+        const scoreElement = document.getElementById('score');
+        const healthElement = document.getElementById('health');
+        
+        let gameState = 'menu';
+        let score = 0;
+        let health = 3;
+        let player = { x: 400, y: 500, size: 16 };
+        let bullets = [];
+        let worm = [];
+        let keys = {};
+        let lastShootTime = 0;
+        const shootCooldown = 300;
+        
+        // Initialize worm
+        function initWorm() {
+            worm = [];
+            for (let i = 0; i < 10; i++) {
+                worm.push({
+                    x: 100 + i * 20,
+                    y: 100,
+                    size: 18,
+                    alive: true
+                });
+            }
+        }
+        
+        // Input handling
+        document.addEventListener('keydown', (e) => {
+            keys[e.key.toLowerCase()] = true;
+        });
+        
+        document.addEventListener('keyup', (e) => {
+            keys[e.key.toLowerCase()] = false;
+        });
+        
+        function updatePlayer(deltaTime) {
+            const speed = 300 * deltaTime / 1000;
+            
+            if (keys['w'] || keys['arrowup']) player.y -= speed;
+            if (keys['s'] || keys['arrowdown']) player.y += speed;
+            if (keys['a'] || keys['arrowleft']) player.x -= speed;
+            if (keys['d'] || keys['arrowright']) player.x += speed;
+            
+            // Keep player on screen
+            player.x = Math.max(16, Math.min(784, player.x));
+            player.y = Math
+player.y = Math.max(16, Math.min(584, player.y));
+            
+            // Shooting
+            const now = Date.now();
+            if ((keys[' '] || keys['space']) && now - lastShootTime > shootCooldown) {
+                bullets.push({
+                    x: player.x,
+                    y: player.y - 10,
+                    vx: 0,
+                    vy: -500,
+                    size: 6
+                });
+                lastShootTime = now;
+            }
+        }
+        
+        function updateWorm(deltaTime) {
+            if (worm.length === 0) return;
+            
+            const speed = 100 * deltaTime / 1000;
+            const head = worm[0];
+            
+            // Simple movement pattern
+            if (head.x <= 20 || head.x >= 780) {
+                for (let segment of worm) {
+                    segment.vx = -segment.vx || speed;
+                }
+            }
+            if (head.y <= 20 || head.y >= 580) {
+                for (let segment of worm) {
+                    segment.vy = -segment.vy || speed;
+                }
+            }
+            
+            // Move head
+            if (!head.vx) head.vx = speed;
+            if (!head.vy) head.vy = 0;
+            head.x += head.vx;
+            head.y += head.vy;
+            
+            // Follow the leader for other segments
+            for (let i = 1; i < worm.length; i++) {
+                const target = worm[i - 1];
+                const dx = target.x - worm[i].x;
+                const dy = target.y - worm[i].y;
+                const dist = Math.sqrt(dx * dx + dy * dy);
+                
+                if (dist > 20) {
+                    worm[i].x += (dx / dist) * speed * 2;
+                    worm[i].y += (dy / dist) * speed * 2;
+                }
+            }
+        }
+        
+        function updateBullets(deltaTime) {
+            const speed = deltaTime / 1000;
+            
+            for (let i = bullets.length - 1; i >= 0; i--) {
+                const bullet = bullets[i];
+                bullet.x += bullet.vx * speed;
+                bullet.y += bullet.vy * speed;
+                
+                // Remove off-screen bullets
+                if (bullet.y < -10 || bullet.y > 610 || bullet.x < -10 || bullet.x > 810) {
+                    bullets.splice(i, 1);
+                    continue;
+                }
+                
+                // Check collision with worm
+                for (let j = worm.length - 1; j >= 0; j--) {
+                    const segment = worm[j];
+                    const dx = bullet.x - segment.x;
+                    const dy = bullet.y - segment.y;
+                    const dist = Math.sqrt(dx * dx + dy * dy);
+                    
+                    if (dist < bullet.size + segment.size) {
+                        worm.splice(j, 1);
+                        bullets.splice(i, 1);
+                        score += 100;
+                        updateScore();
+                        break;
+                    }
+                }
+            }
+        }
+        
+        function updateScore() {
+            scoreElement.textContent = `SCORE: ${score.toString().padStart(6, '0')}`;
+        }
+        
+        function updateHealth() {
+            healthElement.textContent = `HEALTH: ${health}`;
+        }
+        
+        function draw() {
+            // Clear canvas
+            ctx.fillStyle = '#000';
+            ctx.fillRect(0, 0, 800, 600);
+            
+            if (gameState !== 'playing') return;
+            
+            // Draw player (triangle)
+            ctx.fillStyle = '#0f0';
+            ctx.beginPath();
+            ctx.moveTo(player.x, player.y - player.size);
+            ctx.lineTo(player.x - player.size/2, player.y + player.size/2);
+            ctx.lineTo(player.x + player.size/2, player.y + player.size/2);
+            ctx.closePath();
+            ctx.fill();
+            
+            // Draw worm
+            for (let i = 0; i < worm.length; i++) {
+                const segment = worm[i];
+                ctx.fillStyle = i === 0 ? '#f00' : '#800';
+                ctx.fillRect(segment.x - segment.size/2, segment.y - segment.size/2, segment.size, segment.size);
+            }
+            
+            // Draw bullets
+            ctx.fillStyle = '#0f0';
+            for (let bullet of bullets) {
+                ctx.fillRect(bullet.x - bullet.size/2, bullet.y - bullet.size, bullet.size, bullet.size * 2);
+            }
+        }
+        
+        function gameLoop(currentTime) {
+            const deltaTime = 16; // ~60 FPS
+            
+            if (gameState === 'playing') {
+                updatePlayer(deltaTime);
+                updateWorm(deltaTime);
+                updateBullets(deltaTime);
+                
+                // Check victory
+                if (worm.length === 0) {
+                    showVictory();
+                }
+            }
+            
+            draw();
+            requestAnimationFrame(gameLoop);
+        }
+        
+        function startGame() {
+            gameState = 'playing';
+            score = 0;
+            health = 3;
+            bullets = [];
+            player = { x: 400, y: 500, size: 16 };
+            initWorm();
+            updateScore();
+            updateHealth();
+            menu.style.display = 'none';
+        }
+        
+        function restartGame() {
+            startGame();
+        }
+        
+        function showMenu() {
+            gameState = 'menu';
+            menu.style.display = 'block';
+            menuTitle.textContent = 'SNAKE SHOOTER';
+            menuText.style.display = 'block';
+            finalScore.style.display = 'none';
+            startButton.style.display = 'inline-block';
+            restartButton.style.display = 'none';
+            menuButton.style.display = 'none';
+        }
+        
+        function showVictory() {
+            gameState = 'victory';
+            menu.style.display = 'block';
+            menuTitle.textContent = 'VICTORY!';
+            menuText.style.display = 'none';
+            finalScore.style.display = 'block';
+            finalScore.textContent = `FINAL SCORE: ${score.toString().padStart(6, '0')}`;
+            startButton.style.display = 'none';
+            restartButton.style.display = 'inline-block';
+            menuButton.style.display = 'inline-block';
+        }
+        
+        function showDefeat() {
+            gameState = 'defeat';
+            menu.style.display = 'block';
+            menuTitle.textContent = 'GAME OVER';
+            menuText.style.display = 'none';
+            finalScore.style.display = 'block';
+            finalScore.textContent = `FINAL SCORE: ${score.toString().padStart(6, '0')}`;
+            startButton.style.display = 'none';
+            restartButton.style.display = 'inline-block';
+            menuButton.style.display = 'inline-block';
+        }
+        
+        function closeGame() {
+            window.close();
+        }
+        
+        // Initialize game
+        showMenu();
+        gameLoop();
+    </script>
